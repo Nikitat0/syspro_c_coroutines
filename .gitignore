@@ -2,3 +2,4 @@
 /tests/*.passed
 /tests/*-actual-*.txt
 /*.formatted
+/main-*
