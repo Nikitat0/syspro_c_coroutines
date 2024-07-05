@@ -26,4 +26,6 @@ int main() {
   for (size_t i = 0; i < size; i++)
     coopmult_add_task(sorter, &numbers[i]);
   coopmult_run();
+
+  free(numbers);
 }
