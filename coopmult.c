@@ -72,9 +72,9 @@ static void coopmult_begin_task(Task task) {
 #if defined(__x86_64__)
   __asm__ volatile(
       "movq %0, %%rsp\n"
-      "call %p1\n"
+      "call *%1\n"
       :
-      : "r"(stackBottom), "s"(coopmult_sentinel), "D"(task.entry), "S"(task.args));
+      : "r"(stackBottom), "r"(coopmult_sentinel), "D"(task.entry), "S"(task.args));
 #elif defined(__i386__)
   __asm__ volatile(
       "movl %0, %%esp\n"
