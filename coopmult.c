@@ -32,7 +32,7 @@ static jmp_buf entrypoint;
 static char* activeStack;
 
 static void coopmult_begin_task(Task task);
-static void coopmult_end_task(void);
+static void coopmult_sentinel(Task task);
 static void coopmult_continue(void);
 
 void coopmult_add_task(void (*entry)(void*), void* args) {
@@ -55,33 +55,6 @@ void coopmult_sleep(void) {
   coopmult_continue();
 }
 
-static void coopmult_begin_task(Task task) {
-  activeStack = stacksIsEmpty(cachedStacks) ? malloc(STACK_SIZE) : stacksPop(&cachedStacks);
-#if defined(__x86_64__)
-  __asm__ volatile(
-      "movq %0, %%rsp\n"
-      "pushq %1\n"
-      "jmp *%3"
-      :
-      : "r"(activeStack + STACK_SIZE), "r"(coopmult_end_task), "D"(task.args), "r"(task.entry));
-#elif defined(__i386__)
-  __asm__ volatile(
-      "movl %0, %%esp\n"
-      "pushl %1\n"
-      "pushl %2\n"
-      "jmp *%3"
-      :
-      : "r"(activeStack + STACK_SIZE), "r"(task.args), "r"(coopmult_end_task), "r"(task.entry));
-#else
-  #error Unsupported platform
-#endif
-}
-
-static void coopmult_end_task(void) {
-  stacksPush(&cachedStacks, activeStack);
-  coopmult_continue();
-}
-
 static void coopmult_continue(void) {
   if (!tasksIsEmpty(queuedTasks))
     coopmult_begin_task(tasksPop(&queuedTasks));
@@ -91,4 +64,32 @@ static void coopmult_continue(void) {
     longjmp(co.env, true);
   } else
     longjmp(entrypoint, true);
+}
+
+static void coopmult_begin_task(Task task) {
+  activeStack = stacksIsEmpty(cachedStacks) ? malloc(STACK_SIZE) : stacksPop(&cachedStacks);
+  char* stackBottom = activeStack + STACK_SIZE;
+#if defined(__x86_64__)
+  __asm__ volatile(
+      "movq %0, %%rsp\n"
+      "call %p1\n"
+      :
+      : "r"(stackBottom), "s"(coopmult_sentinel), "D"(task.entry), "S"(task.args));
+#elif defined(__i386__)
+  __asm__ volatile(
+      "movl %0, %%esp\n"
+      "pushl %2\n"
+      "pushl %1\n"
+      "call *%3\n"
+      :
+      : "r"(stackBottom - 8), "r"(task.entry), "r"(task.args), "r"(coopmult_sentinel));
+#else
+  #error Unsupported platform
+#endif
+}
+
+static void coopmult_sentinel(Task task) {
+  task.entry(task.args);
+  stacksPush(&cachedStacks, activeStack);
+  coopmult_continue();
 }
