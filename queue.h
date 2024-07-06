@@ -36,9 +36,9 @@
   }                                                                                      \
                                                                                          \
   Element prefix##Pop(Name* self) {                                                      \
-    Element element = self->front->element;                                              \
     struct Name##Node* front = self->front;                                              \
     self->front = front->next;                                                           \
+    Element element = front->element;                                                    \
     free(front);                                                                         \
     return element;                                                                      \
   }
