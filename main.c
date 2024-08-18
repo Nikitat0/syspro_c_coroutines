@@ -3,10 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void _sorter(int n) {
+  if (n == 0)
+    return;
+  _sorter(n - 1);
+  coopmult_sleep();
+}
+
 void sorter(void* arg) {
   int n = *(int*) arg;
-  for (int i = 0; i < n; i++)
-    coopmult_sleep();
+  _sorter(n);
   printf("%d\n", n);
 }
 
